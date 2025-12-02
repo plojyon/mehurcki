@@ -1,0 +1,14 @@
+[project]
+name = "mehurcki"
+version = "0.1.0"
+description = "Zvočni detektor mehurčkov"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fire>=0.7.1",
+    "ipykernel>=7.1.0",
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.5",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.3",
+]
