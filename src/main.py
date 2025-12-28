@@ -107,14 +107,21 @@ class Main:
     def visualize_waveform(self, file_name: str):
         visualize_waveform(file_name)
 
-    def train_detector(self, name="all", preprocessor=None):
+    def train_detector(self, name="all", preprocessor="identity"):
         available_models = BubbleDetector.detectors.keys()
         available_preprocessors = BubbleDetector.preprocessors.keys()
 
         if name not in list(available_models) + ["all"]:
             raise ValueError(f"Available models: {list(available_models)}")
+        if preprocessor not in available_preprocessors:
+            raise ValueError(f"Available preprocessors: {list(available_preprocessors)}")
 
         data = prepare_data()
+
+        print(f"Loaded data of total length {data[0].shape} samples ({data[0].shape[0]/SAMPLE_RATE:.0f} seconds)")
+        print(f"Using window size of {WINDOW_SIZE}s ({int(WINDOW_SIZE * SAMPLE_RATE)} samples)")
+        print(f"Recommended wavelet levels: {np.log2(len(data[0])/(WINDOW_SIZE * SAMPLE_RATE)):.1f}")
+
         if name == "all":
             for model_name in available_models:
                 train_detector(model_name, preprocessor, *data)

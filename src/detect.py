@@ -32,8 +32,7 @@ class BubbleDetector:
         "continuous_wavelet": ContinuousWaveletPreprocessor,
     }
 
-    def __init__(self, model_name: str, preprocessor_name: Optional[str] = None, model_parameters: dict = {}, preprocessor_parameters: dict = {}):
-        preprocessor_name = preprocessor_name or "identity"
+    def __init__(self, model_name: str, preprocessor_name: str, model_parameters: dict = {}, preprocessor_parameters: dict = {}):
         self.model = self.detectors[model_name](**model_parameters)
         self.preprocessor = self.preprocessors[preprocessor_name](**preprocessor_parameters)
 
@@ -46,7 +45,6 @@ class BubbleDetector:
         transformed = self.preprocessor.transform(data)
         transformed_positive = [self.preprocessor.transform_interval(interval) for interval in positive_intervals]
         transformed_negative = [self.preprocessor.transform_interval(interval) for interval in negative_intervals]
-        print("transformed is ", type(transformed))
         return self.model.train(transformed, transformed_positive, transformed_negative)
 
     def detect(self, transformed_data, transformed_intervals):
