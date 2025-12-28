@@ -1,5 +1,6 @@
 import os
 import random
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,14 +12,17 @@ from plot import plot_annotations, plot_wav
 from sample import sample_training_data
 
 SAMPLE_RATE = 44100
-WINDOW_SIZE = 0.3  # seconds
+WINDOW_SIZE = 0.05  # seconds
 TRAIN_RATIO = 0.7
 
 annotations = load_annotations("data/annotations.json")
-wav_files = [f for f in os.listdir("data/") if f.endswith(".wav")]
 
+def prepare_data(file: Optional[str] = None):
+    if file is not None:
+        wav_files = [file]
+    else:
+        wav_files = [f for f in os.listdir("data/") if f.endswith(".wav")]
 
-def prepare_data():
     print(f"Found {len(wav_files)} wav files")
 
     audio_files = []
@@ -35,6 +39,8 @@ def prepare_data():
 
     all_annotations = []
     for file_name in annotations:
+        if file_name not in offsets:
+            continue
         all_annotations.extend([
             BubbleAnnotation(start=ann[0] + offsets[file_name], end=ann[1] + offsets[file_name])
             for ann in annotations[file_name]
@@ -90,7 +96,7 @@ def train_detector(
     detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
 
 def visualize_waveform(file_name):
-    t, audio = load_wav(file_name)
+    t, audio = load_wav(f"data/{file_name}")
     audio = audio.astype(float)
 
     fig, ax = plt.subplots(figsize=(12, 4))
@@ -104,10 +110,10 @@ def visualize_waveform(file_name):
 
 
 class Main:
-    def visualize_waveform(self, file_name: str):
-        visualize_waveform(file_name)
+    def visualize_waveform(self, file: str):
+        visualize_waveform(file)
 
-    def train_detector(self, name="all", preprocessor="identity"):
+    def train_detector(self, name:str="all", preprocessor: str="identity", file: Optional[str]=None):
         available_models = BubbleDetector.detectors.keys()
         available_preprocessors = BubbleDetector.preprocessors.keys()
 
@@ -116,7 +122,7 @@ class Main:
         if preprocessor not in available_preprocessors:
             raise ValueError(f"Available preprocessors: {list(available_preprocessors)}")
 
-        data = prepare_data()
+        data = prepare_data(file)
 
         print(f"Loaded data of total length {data[0].shape} samples ({data[0].shape[0]/SAMPLE_RATE:.0f} seconds)")
         print(f"Using window size of {WINDOW_SIZE}s ({int(WINDOW_SIZE * SAMPLE_RATE)} samples)")
