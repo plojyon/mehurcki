@@ -1,14 +1,7 @@
 import numpy as np
 from sklearn import svm
 
-
-def get_sample(data, interval):
-    sample = data[:, interval.start:interval.end]
-    if sample.shape[0] <= 100:
-        sample = sample.flatten()
-    else:
-        sample = sample.mean(axis=1)
-    return sample
+from sample import get_sample
 
 
 class SVMDetector:

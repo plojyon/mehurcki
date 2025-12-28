@@ -6,6 +6,17 @@ import numpy as np
 from load import BubbleAnnotation
 
 
+def get_sample(data: np.ndarray, interval: BubbleAnnotation):
+    """Extract sample from data given an interval."""
+    sample = data[:, interval.start:interval.end]
+    if sample.shape[0] <= 100:
+        sample = sample.flatten()
+    else:
+        # sample = sample.mean(axis=1)
+        sample = sample[:, 0]
+    return sample
+
+
 def invert_intervals(intervals: BubbleAnnotation, total_length: int):
     """Invert a list of intervals."""
     inverted = []
