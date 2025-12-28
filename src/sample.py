@@ -8,7 +8,16 @@ from load import BubbleAnnotation
 
 def get_sample(data: np.ndarray, interval: BubbleAnnotation):
     """Extract sample from data given an interval."""
-    sample = data[:, interval.start:interval.end]
+    s, e = interval.start, interval.end
+
+    # handle edge cases
+    if interval.end - interval.start == 0:
+        if interval.end >= data.shape[1]:
+            s -= 1
+        else:
+            e += 1
+
+    sample = data[:, s:e]
     if sample.shape[0] <= 100:
         sample = sample.flatten()
     else:
@@ -41,11 +50,15 @@ def sample_within_annotations(
 ) -> list[BubbleAnnotation]:
     """Sample fixed-size windows within given intervals."""
     legal_sampling_ranges = []
+    if not intervals:
+        print("No annotations to sample from! Wtf?")
+        return []
     for start, end in intervals:
         if end - start >= window_size:
             legal_sampling_ranges.append((start, end - window_size))
     if not legal_sampling_ranges:
         print(f"Cannot sample anything with window size {window_size}!")
+        print(f"Largest annotation size: {max((end - start) for start, end in intervals)}")
         return []
 
     # Build cumulative lengths
