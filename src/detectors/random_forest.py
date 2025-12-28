@@ -1,8 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-from transform import stft
-
 
 def extract_features(stft_mag_db: np.ndarray) -> np.ndarray:
     """Extract features from STFT for classification."""
@@ -41,8 +39,10 @@ class RandomForest:
             n_estimators=n_estimators, random_state=random_state, max_depth=max_depth
         )
 
+
     def train(self, train_positive, train_negative):
         """Train the random forest classifier."""
+        return None
         # Extract features from training samples
         X_train = []
         y_train = []
@@ -65,8 +65,9 @@ class RandomForest:
         self.clf.fit(X_train, y_train)
         self.trained = True
 
-    def detect(self, sample):
+    def detect(self, data, intervals):
         """Detect if the STFT represents a bubble."""
+        return True
         stft_rep = stft(sample)
         features = extract_features(stft_rep)
         prediction = self.clf.predict([features])[0]

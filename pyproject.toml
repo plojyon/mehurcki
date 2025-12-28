@@ -5,10 +5,14 @@ description = "Zvočni detektor mehurčkov"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "black>=25.12.0",
     "fire>=0.7.1",
     "ipykernel>=7.1.0",
+    "isort>=7.0.0",
     "matplotlib>=3.10.7",
     "numpy>=2.3.5",
+    "pywavelets>=1.9.0",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.3",
+    "tqdm>=4.67.1",
 ]

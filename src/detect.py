@@ -1,45 +1,66 @@
-from sklearn.metrics import precision_recall_fscore_support
+from collections import defaultdict
+from typing import Optional
 
+from sklearn.metrics import precision_recall_fscore_support
+from tqdm import tqdm
+
+from detectors.constant import ConstantDetector
+from detectors.random import RandomDetector
 from detectors.random_forest import RandomForest
 
-
-class Constant:
-    def train(self, train_positive, train_negative):
-        pass
-
-    def detect(self, sample):
-        return True
+# from detectors.wavelet import WaveletBubbleDetector
+from detectors.svm import SVMDetector
+from preprocessors.continuous_wavelet import ContinuousWaveletPreprocessor
+from preprocessors.identity import IdentityPreprocessor
+from preprocessors.stft import StftPreprocessor
+from preprocessors.wavelet import WaveletPreprocessor
 
 
 class BubbleDetector:
     """A bubble detector superclass."""
 
     detectors = {
-        "constant_true": Constant,
+        "constant_true": ConstantDetector,
         "random_forest": RandomForest,
+        "random": RandomDetector,
+        "svm": SVMDetector,
+    }
+    preprocessors = {
+        "identity": IdentityPreprocessor,
+        "stft": StftPreprocessor,
+        "wavelet": WaveletPreprocessor,
+        "continuous_wavelet": ContinuousWaveletPreprocessor,
     }
 
-    def __init__(self, model_name: str, parameters: dict = {}):
-        self.model = self.detectors[model_name](**parameters)
-        self.name = model_name
+    def __init__(self, model_name: str, preprocessor_name: Optional[str] = None, model_parameters: dict = {}, preprocessor_parameters: dict = {}):
+        preprocessor_name = preprocessor_name or "identity"
+        self.model = self.detectors[model_name](**model_parameters)
+        self.preprocessor = self.preprocessors[preprocessor_name](**preprocessor_parameters)
 
-    def train(self, train_positive, train_negative):
+        str_prepr_params = "" if not preprocessor_parameters else f"({preprocessor_parameters})"
+        str_model_params = "" if not model_parameters else f"({model_parameters})"
+        self.name = f"{preprocessor_name}{str_prepr_params}:{model_name}{str_model_params}"
+
+    def train(self, data, positive_intervals, negative_intervals):
         """Train the bubble detector using positive and negative samples."""
-        return self.model.train(train_positive, train_negative)
+        transformed = self.preprocessor.transform(data)
+        transformed_positive = [self.preprocessor.transform_interval(interval) for interval in positive_intervals]
+        transformed_negative = [self.preprocessor.transform_interval(interval) for interval in negative_intervals]
+        print("transformed is ", type(transformed))
+        return self.model.train(transformed, transformed_positive, transformed_negative)
 
-    def detect(self, sample):
+    def detect(self, transformed_data, transformed_intervals):
         """Detect bubbles in the STFT representation."""
-        return self.model.detect(sample)
+        return self.model.detect(transformed_data, transformed_intervals)
 
-    def evaluate(self, positive, negative, to_stdout=True):
+    def evaluate(self, data, positive_intervals, negative_intervals, to_stdout=True):
         """Evaluate the bubble detector on the test set."""
-        samples = positive + negative
-        labels = [1] * len(positive) + [0] * len(negative)
-
+        labels = []
         predictions = []
-        for sample in samples:
-            prediction = 1 if self.detect(sample) else 0
-            predictions.append(prediction)
+        transformed = self.preprocessor.transform(data)
+        labels = [1] * len(positive_intervals) + [0] * len(negative_intervals)
+        transformed_intervals = [self.preprocessor.transform_interval(interval) for interval in positive_intervals + negative_intervals]
+        predictions = self.detect(transformed, transformed_intervals)
 
         precision, recall, f1, _ = precision_recall_fscore_support(
             labels, predictions, average="binary", zero_division=0

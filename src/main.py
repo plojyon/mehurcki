@@ -1,12 +1,14 @@
 import os
+import random
 
 import matplotlib.pyplot as plt
+import numpy as np
 from fire import Fire
 
 from detect import BubbleDetector
-from load import load_annotations, load_wav
+from load import BubbleAnnotation, load_annotations, load_wav
 from plot import plot_annotations, plot_wav
-from transform import sample_training_data
+from sample import sample_training_data
 
 SAMPLE_RATE = 44100
 WINDOW_SIZE = 0.3  # seconds
@@ -19,63 +21,73 @@ wav_files = [f for f in os.listdir("data/") if f.endswith(".wav")]
 def prepare_data():
     print(f"Found {len(wav_files)} wav files")
 
-    positive_samples = []
-    negative_samples = []
-
+    audio_files = []
+    offsets = {}
+    offset = 0
     for file_name in wav_files:
         _, audio = load_wav(f"data/{file_name}")
         audio = audio.astype(float)
+        offsets[file_name] = offset
+        offset += audio.size
+        audio_files.append(audio)
 
-        if file_name in annotations:
-            pos, neg = sample_training_data(
-                audio,
-                annotations[file_name],
-                window_size=int(WINDOW_SIZE * SAMPLE_RATE),
-                count_positive=30,
-                count_negative=30,
-            )
-            positive_samples.extend(pos)
-            negative_samples.extend(neg)
+    data = np.concatenate(audio_files)
+
+    all_annotations = []
+    for file_name in annotations:
+        all_annotations.extend([
+            BubbleAnnotation(start=ann[0] + offsets[file_name], end=ann[1] + offsets[file_name])
+            for ann in annotations[file_name]
+        ])
+
+    pos, neg = sample_training_data(
+        data,
+        all_annotations,
+        window_size=int(WINDOW_SIZE * SAMPLE_RATE),
+        count_positive=300,
+        count_negative=300,
+    )
+
+    print(f"Obtained {len(pos)}+ and {len(neg)}- samples total.")
 
     # Split into train and test sets
-    n_pos_train = int(TRAIN_RATIO * len(positive_samples))
-    n_neg_train = int(TRAIN_RATIO * len(negative_samples))
+    n_pos_train = int(TRAIN_RATIO * len(pos))
+    n_neg_train = int(TRAIN_RATIO * len(neg))
 
-    train_positive = positive_samples[:n_pos_train]
-    test_positive = positive_samples[n_pos_train:]
+    shuffled_indices_pos = list(range(len(pos)))
+    random.shuffle(shuffled_indices_pos)
+    shuffled_indices_neg = list(range(len(neg)))
+    random.shuffle(shuffled_indices_neg)
 
-    train_negative = negative_samples[:n_neg_train]
-    test_negative = negative_samples[n_neg_train:]
+    train_positive = [pos[i] for i in shuffled_indices_pos[:n_pos_train]]
+    test_positive = [pos[i] for i in shuffled_indices_pos[n_pos_train:]]
 
-    print("Total samples: ", end="")
-    print(f"{len(positive_samples)} positive, ", end="")
-    print(f"{len(negative_samples)} negative")
+    train_negative = [neg[i] for i in shuffled_indices_neg[:n_neg_train]]
+    test_negative = [neg[i] for i in shuffled_indices_neg[n_neg_train:]]
 
-    print("Training samples: ", end="")
-    print(f"{len(train_positive)} positive, ", end="")
-    print(f"{len(train_negative)} negative")
-
-    print("Testing samples: ", end="")
-    print(f"{len(test_positive)} positive, ", end="")
-    print(f"{len(test_negative)} negative")
-
-    return train_positive, train_negative, test_positive, test_negative
+    return (
+        data,
+        train_positive, train_negative,
+        test_positive, test_negative,
+    )
 
 
 def train_detector(
     model: str,
+    preprocessor: str,
+    data,
     train_positive,
     train_negative,
     test_positive,
     test_negative,
 ):
-    detector = BubbleDetector(model)
+    detector = BubbleDetector(model, preprocessor)
     detector.train(
-        train_positive=train_positive,
-        train_negative=train_negative,
+        data=data,
+        positive_intervals=train_positive,
+        negative_intervals=train_negative,
     )
-    detector.evaluate(positive=test_positive, negative=test_negative)
-
+    detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
 
 def visualize_waveform(file_name):
     t, audio = load_wav(file_name)
@@ -95,17 +107,19 @@ class Main:
     def visualize_waveform(self, file_name: str):
         visualize_waveform(file_name)
 
-    def train_detector(self, name="all"):
-        data = prepare_data()
-
+    def train_detector(self, name="all", preprocessor=None):
         available_models = BubbleDetector.detectors.keys()
+        available_preprocessors = BubbleDetector.preprocessors.keys()
+
+        if name not in list(available_models) + ["all"]:
+            raise ValueError(f"Available models: {list(available_models)}")
+
+        data = prepare_data()
         if name == "all":
             for model_name in available_models:
-                train_detector(model_name, *data)
+                train_detector(model_name, preprocessor, *data)
         else:
-            if name not in available_models:
-                raise ValueError(f"Available models: {list(available_models)}")
-            train_detector(name, *data)
+            train_detector(name, preprocessor, *data)
 
 
 if __name__ == "__main__":

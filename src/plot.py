@@ -1,6 +1,6 @@
 import numpy as np
 
-from transform import hann_window
+# from src.sample import hann_window
 
 
 def plot_wav(ax, t, audio, title):
@@ -28,6 +28,7 @@ def plot_annotations(ax, annotations, audio):
 
 def plot_window(ax, start_s, end_s):
     """Draw a square window on the audio signal."""
+    return None
     window = hann_window(int((end_s - start_s) * 44100))
     t_window = np.arange(len(window)) / 44100.0 + start_s
     ax.plot(
