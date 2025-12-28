@@ -13,9 +13,10 @@ def upsample_to_length(c, factor, N):
 class WaveletPreprocessor:
     """"A preprocessor that applies wavelet transform."""
 
-    def __init__(self, wavelet: str = 'haar', level: int = 4):
+    def __init__(self, wavelet: str = 'haar', level: int = 10, no_levels: int = 3):
         self.wavelet = wavelet
         self.level = level
+        self.no_levels = no_levels
 
     def transform(self, sample):
         """Transform the sample."""
@@ -26,6 +27,10 @@ class WaveletPreprocessor:
             upsample_to_length(c, 2**k, len(sample))
             for k, c in enumerate(reversed(coeffs))
         ])
+        # print("0th", rect[0, :20])
+        # print("-1th", rect[-1, :20])
+        # only keep top self.no_levels levels (highest frequency)
+        rect = rect[:self.no_levels, :]
         # print(f"Wavelet transform result type: {type(rect)}, shape: {rect.shape}")
         return rect
 
