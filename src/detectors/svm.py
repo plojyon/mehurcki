@@ -2,6 +2,15 @@ import numpy as np
 from sklearn import svm
 
 
+def get_sample(data, interval):
+    sample = data[:, interval.start:interval.end]
+    if sample.shape[0] <= 100:
+        sample = sample.flatten()
+    else:
+        sample = sample.mean(axis=1)
+    return sample
+
+
 class SVMDetector:
     """"A bubble detector using SVM."""
     def __init__(self):
@@ -16,12 +25,12 @@ class SVMDetector:
         for interval in positive_intervals:
             # pos.append(data[:, interval.start:interval.end])
             # print(f"pos shape: {data[:, interval.start:interval.end].shape}, {interval.start}-{interval.end} = {interval.end-interval.start}")
-            pos.append(data[:, interval.start])
+            pos.append(get_sample(data, interval))
             # print(f"pos shape: {data[:, interval.start].shape}")
         for interval in negative_intervals:
             # neg.append(data[:, interval.start:interval.end])
             # print(f"neg shape: {data[:, interval.start:interval.end].shape}, {interval.start}-{interval.end} = {interval.end-interval.start}")
-            neg.append(data[:, interval.start])
+            neg.append(get_sample(data, interval))
             # print(f"neg shape: {data[:, interval.start].shape}")
 
         print(f"Collected {len(pos)} positive and {len(neg)} negative samples for SVM training.")
@@ -36,6 +45,6 @@ class SVMDetector:
         # prediction = self.model.predict([sample[interval.start:interval.end]])[0]
         predictions = []
         for interval in intervals:
-            prediction = self.model.predict([data[:, interval.start]])
+            prediction = self.model.predict([get_sample(data, interval)])
             predictions.append(bool(prediction[0]))
         return predictions
