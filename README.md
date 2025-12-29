@@ -52,3 +52,4 @@ Možni zvočni posnetki: ime `.wav` datoteke v mapi `data/` (privzeto: vse).
 
 ## Detekcije
 ![Detekcije](media/detections.png)
+![Detekcije na tezavnem primeru](media/detections-difficult.png)
