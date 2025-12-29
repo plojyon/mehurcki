@@ -14,6 +14,7 @@ from sample import sample_training_data
 SAMPLE_RATE = 44100
 WINDOW_SIZE = 0.05  # seconds
 TRAIN_RATIO = 0.7
+MERGE_THRESHOLD = 10  # in samples
 
 annotations = load_annotations("data/annotations.json")
 
@@ -94,6 +95,7 @@ def train_detector(
         negative_intervals=train_negative,
     )
     detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
+    return detector
 
 def visualize_waveform(file_name):
     t, audio = load_wav(f"data/{file_name}")
@@ -108,6 +110,70 @@ def visualize_waveform(file_name):
 
     plt.show()
 
+def visualize_detections(detector: BubbleDetector, data, annotations, file_name):
+    fig, (ax_gt, ax_det) = plt.subplots(2, 1, figsize=(12, 6), sharex=True, sharey=True)
+
+    t = np.arange(len(data)) / SAMPLE_RATE
+
+    # Annotations (ground truth)
+    plot_wav(ax_gt, t, data, title=f"{file_name} annotations (ground truth)")
+    base_name = os.path.basename(file_name)
+    if base_name in annotations:
+        plot_annotations(
+            ax_gt,
+            annotations[base_name],
+            data,
+            color="green",
+            label="Annotations",
+        )
+    ax_gt.legend()
+
+    # Detections
+    plot_wav(ax_det, t, data, title=f"{file_name} detections")
+
+    window = int(WINDOW_SIZE * SAMPLE_RATE)
+    intervals = [
+        BubbleAnnotation(start=i, end=i + window)
+        for i in range(0, len(data) - window, window)
+    ]
+
+    transformed = detector.preprocessor.transform(data)
+    transformed_intervals = [
+        detector.preprocessor.transform_interval(interval)
+        for interval in intervals
+    ]
+    labels = detector.detect(transformed, transformed_intervals)
+    detected_intervals = [
+        interval for interval, label in zip(intervals, labels) if label
+    ]
+
+    if detected_intervals:
+        # merge neighbouring intervals
+        merged_intervals = detected_intervals[:1]
+        for interval in detected_intervals[1:]:
+            if np.abs(interval.start - merged_intervals[-1].end) <= MERGE_THRESHOLD:
+                merged_intervals[-1] = BubbleAnnotation(
+                    start=merged_intervals[-1].start,
+                    end=interval.end,
+                )
+            else:
+                merged_intervals.append(interval)
+
+        plot_annotations(
+            ax_det,
+            merged_intervals,
+            data,
+            color="red",
+            label="Detections",
+        )
+    else:
+        print("No bubbles detected.")
+
+    ax_det.legend()
+    ax_det.set_xlabel("Time (s)")
+
+    plt.tight_layout()
+    plt.show()
 
 class Main:
     def visualize_waveform(self, file: str):
@@ -132,7 +198,14 @@ class Main:
             for model_name in available_models:
                 train_detector(model_name, preprocessor, *data)
         else:
-            train_detector(name, preprocessor, *data)
+            detector = train_detector(name, preprocessor, *data)
+            if file is not None:
+                visualize_detections(
+                    detector=detector,
+                    data=data[0],
+                    annotations=annotations,
+                    file_name=file,
+                )
 
 
 if __name__ == "__main__":

@@ -12,13 +12,13 @@ def plot_wav(ax, t, audio, title):
     ax.set_title(title)
 
 
-def plot_annotations(ax, annotations, audio):
+def plot_annotations(ax, annotations, audio, color="red", label="Annotations"):
     """Plot bubble annotations on the audio signal."""
     for i, (start_idx, end_idx) in enumerate(annotations, start=1):
         start_s = start_idx / 44100.0
         end_s = end_idx / 44100.0
 
-        ax.axvspan(start_s, end_s, color="red", alpha=0.25)
+        ax.axvspan(start_s, end_s, color=color, alpha=0.25, label=label if i == 1 else "")
 
         y_loc = 0.9 * (np.max(audio) if np.max(np.abs(audio)) > 0 else 1.0)
         ax.text(
