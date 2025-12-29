@@ -21,8 +21,8 @@ def get_sample(data: np.ndarray, interval: BubbleAnnotation):
     if sample.shape[0] <= 100:
         sample = sample.flatten()
     else:
-        # sample = sample.mean(axis=1)
-        sample = sample[:, 0]
+        sample = sample.mean(axis=1)
+        # sample = sample[:, 0]
     return sample
 
 
@@ -42,24 +42,8 @@ def invert_intervals(intervals: BubbleAnnotation, total_length: int):
     return inverted
 
 
-def sample_within_annotations(
-    audio: np.ndarray,
-    intervals: list[BubbleAnnotation],
-    window_size: int,
-    count: int,
-) -> list[BubbleAnnotation]:
-    """Sample fixed-size windows within given intervals."""
-    legal_sampling_ranges = []
-    if not intervals:
-        print("No annotations to sample from! Wtf?")
-        return []
-    for start, end in intervals:
-        if end - start >= window_size:
-            legal_sampling_ranges.append((start, end - window_size))
-    if not legal_sampling_ranges:
-        print(f"Cannot sample anything with window size {window_size}!")
-        print(f"Largest annotation size: {max((end - start) for start, end in intervals)}")
-        return []
+def sample_one(legal_sampling_ranges: list[BubbleAnnotation]) -> list[BubbleAnnotation]:
+    """Sample a number within given intervals."""
 
     # Build cumulative lengths
     lengths = []
@@ -68,39 +52,76 @@ def sample_within_annotations(
         total += end - start
         lengths.append(total)
 
+    r = random.randint(0, total)
+
+    # find the sampled range
+    idx = bisect.bisect_left(lengths, r)
+    start, end = legal_sampling_ranges[idx]
+
+    # calculate offset
+    prev = lengths[idx - 1] if idx > 0 else 0
+
+    return start + (r - prev)
+
+def sample_within_annotations(
+    intervals: list[BubbleAnnotation],
+    window_size: int,
+    count: int,
+) -> list[BubbleAnnotation]:
+    """Sample non-overlapping fixed-size windows within given intervals."""
+    if not intervals:
+        print("No annotations to sample from! Wtf?")
+        return []
+
+    # build initial legal sampling ranges
+    legal_sampling_ranges = []    
+    for start, end in intervals:
+        if end - start >= window_size:
+            legal_sampling_ranges.append((start, end - window_size))
+
     samples = []
-    for _ in range(count):
-        r = random.randint(0, total)
+    while len(samples) < count:
+        if not legal_sampling_ranges:
+            print(f"Dead end, cannot sample anything else with window size {window_size}")
+            print(f"Obtained {len(samples)} samples out of requested {count}.")
+            break
 
-        # find the sampled range
-        idx = bisect.bisect_left(lengths, r)
-        start, end = legal_sampling_ranges[idx]
+        sample = sample_one(legal_sampling_ranges)
+        samples.append(sample)
 
-        # calculate offset
-        prev = lengths[idx - 1] if idx > 0 else 0
-        samples.append(start + (r - prev))
+        # update legal sampling ranges
+        new_ranges = []
+        for range_start, range_end in legal_sampling_ranges:
+            if sample + window_size <= range_start or sample - window_size >= range_end:
+                # no overlap
+                new_ranges.append((range_start, range_end))
+            else:
+                # overlap, split if necessary
+                if range_start < sample - window_size:
+                    new_ranges.append((range_start, sample - window_size))
+                if sample + window_size < range_end:
+                    new_ranges.append((sample + window_size, range_end))
+        legal_sampling_ranges = new_ranges
 
     return [BubbleAnnotation(start=sample, end=sample + window_size) for sample in samples]
 
 
 def sample_training_data(
-    audio: np.ndarray,
+    length: int,
     annotations: list[BubbleAnnotation],
     window_size: int,  # in samples
-    count_positive: int,
-    count_negative: int,
+    count: int,
 ) -> tuple[list[BubbleAnnotation], list[BubbleAnnotation]]:
     """Extract fixed-size windows from audio.
 
-    Windows have either full or no overlap with bubbles.
+    Windows have either full or no overlap with bubbles and no overlap between
+    each other.
     """
-    positive_windows = sample_within_annotations(
-        audio, annotations, window_size, count_positive
-    )
+    positive_windows = sample_within_annotations(annotations, window_size, count)
 
-    inverted_annotations = invert_intervals(annotations, len(audio))
+    inverted_annotations = invert_intervals(annotations, length)
     negative_windows = sample_within_annotations(
-        audio, inverted_annotations, window_size, count_negative
+        inverted_annotations, window_size, min(count, len(positive_windows))
     )
 
     return positive_windows, negative_windows

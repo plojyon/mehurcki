@@ -48,11 +48,10 @@ def prepare_data(file: Optional[str] = None):
         ])
 
     pos, neg = sample_training_data(
-        data,
+        len(data),
         all_annotations,
         window_size=int(WINDOW_SIZE * SAMPLE_RATE),
-        count_positive=300,
-        count_negative=300,
+        count=1000,
     )
 
     print(f"Obtained {len(pos)}+ and {len(neg)}- samples total.")
