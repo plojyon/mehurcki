@@ -188,7 +188,7 @@ class Main:
         if preprocessor not in available_preprocessors:
             raise ValueError(f"Available preprocessors: {list(available_preprocessors)}")
 
-        data = prepare_data(file)
+        data = prepare_data()
 
         print(f"Loaded data of total length {data[0].shape} samples ({data[0].shape[0]/SAMPLE_RATE:.0f} seconds)")
         print(f"Using window size of {WINDOW_SIZE}s ({int(WINDOW_SIZE * SAMPLE_RATE)} samples)")
@@ -200,6 +200,7 @@ class Main:
         else:
             detector = train_detector(name, preprocessor, *data)
             if file is not None:
+                data = prepare_data(file)
                 visualize_detections(
                     detector=detector,
                     data=data[0],
