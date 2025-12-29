@@ -51,5 +51,4 @@ Možni zvočni posnetki: ime `.wav` datoteke v mapi `data/` (privzeto: vse).
 ![Tezaven primer s hrupom](media/difficult-case.png)
 
 ## Detekcije
-
-TODO
+![Detekcije](media/detections.png)
