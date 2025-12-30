@@ -6,6 +6,8 @@ from sample import get_sample
 
 
 class RandomForest:
+    display_name: str = "Random forest"
+
     def __init__(self, n_estimators=100, random_state=42, max_depth=10):
         self.model = RandomForestClassifier(
             n_estimators=n_estimators, random_state=random_state, max_depth=max_depth

@@ -19,9 +19,9 @@ class BubbleDetector:
     """A bubble detector superclass."""
 
     detectors = {
-        "constant_true": ConstantDetector,
+        # "constant_true": ConstantDetector,
         "random_forest": RandomForest,
-        "random": RandomDetector,
+        # "random": RandomDetector,
         "svm": SVMDetector,
         "logistic_regression": LogisticRegressionDetector,
     }

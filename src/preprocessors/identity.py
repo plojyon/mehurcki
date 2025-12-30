@@ -3,6 +3,7 @@ import numpy as np
 
 class IdentityPreprocessor:
     """A preprocessor that does nothing."""
+    display_name: str = "Identity"
 
     def transform(self, sample):
         """Transform the sample."""

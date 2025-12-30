@@ -6,6 +6,7 @@ from sample import get_sample
 
 class SVMDetector:
     """A bubble detector using SVM."""
+    display_name: str = "SVM"
 
     def __init__(self):
         self.model = svm.SVC()

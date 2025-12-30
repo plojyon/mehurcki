@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import random
 from typing import Optional
@@ -5,6 +7,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 from fire import Fire
+from tqdm import tqdm
 
 from detect import BubbleDetector
 from load import BubbleAnnotation, load_annotations, load_wav
@@ -211,6 +214,62 @@ class Main:
                     file_name=file,
                 )
 
+    def full_eval(self, iterations: int = 1):
+        scores = {model: {preprocessor: [] for preprocessor in BubbleDetector.preprocessors.keys()} for model in BubbleDetector.detectors.keys()}
+        for _ in tqdm(range(iterations)):
+            data, train_positive, train_negative, test_positive, test_negative = prepare_data()
+            for model_name in BubbleDetector.detectors.keys():
+                for preprocessor_name in BubbleDetector.preprocessors.keys():
+                    print(f"Running {model_name}:{preprocessor_name}")
+                    detector = BubbleDetector(model_name, preprocessor_name)
+                    detector.train(
+                        data=data,
+                        positive_intervals=train_positive,
+                        negative_intervals=train_negative,
+                    )
+                    precision, recall, f1 = detector.evaluate(
+                        data=data, positive_intervals=test_positive, negative_intervals=test_negative
+                    )
+                    scores[model_name][preprocessor_name].append({
+                        "precision": precision,
+                        "recall": recall,
+                        "f1": f1,
+                    })
 
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        with open(f"results/{timestamp}.txt", "w") as f:
+            f.write(json.dumps(scores))
+
+        with open(f"results/{timestamp}_summary.txt", "w") as f:
+            # table preamble
+            f.write("\\begin{table}[ht]\n")
+            f.write("\\centering\n")
+            f.write("\\caption{F1-scores across preprocessors and classifiers}\n")
+
+            # column specification
+            f.write("\\begin{tabular}{l" + "c" * len(BubbleDetector.detectors.keys()) + "}\n")
+            f.write("\\hline\n")
+
+            # header row
+            header = ["\\textbf{Preprocessor}"] + [f"\\textbf{{{m.display_name}}}" for m in BubbleDetector.detectors.values()]
+            f.write(" & ".join(header) + " \\\\\n")
+            f.write("\\hline\n")
+
+            # data rows
+            for preprocessor, p in BubbleDetector.preprocessors.items():
+                row = [p.display_name]
+                for model in BubbleDetector.detectors.keys():
+                    if preprocessor in scores[model]:
+                        f1s = [s["f1"] for s in scores[model][preprocessor]]
+                        avg_f1 = sum(f1s) / len(f1s)
+                        row.append(f"{avg_f1:.3f}")
+                    else:
+                        row.append("--")
+                f.write(" & ".join(row) + " \\\\\n")
+
+            # footer
+            f.write("\\hline\n")
+            f.write("\\end{tabular}\n")
+            f.write("\\end{table}\n")
 if __name__ == "__main__":
     Fire(Main)

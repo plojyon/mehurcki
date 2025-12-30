@@ -4,6 +4,7 @@ import pywt
 
 class ContinuousWaveletPreprocessor:
     """A preprocessor that applies wavelet transform."""
+    display_name: str = "Continuous wavelet transform"
 
     def __init__(self, wavelet: str = "morl", level: int = 10, no_levels: int = 3):
         self.wavelet = wavelet

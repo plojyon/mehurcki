@@ -57,6 +57,7 @@ def samples_to_frames(interval: BubbleAnnotation, n_fft: int, hop_length: int):
 
 class StftPreprocessor:
     """A preprocessor that applies STFT."""
+    display_name: str = "Short-time Fourier transform"
 
     def __init__(self):
         self.n_fft = 2048

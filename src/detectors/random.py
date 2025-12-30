@@ -3,6 +3,7 @@ import numpy as np
 
 class RandomDetector:
     """A bubble detector that returns a random result."""
+    display_name: str = "Random"
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the classifier."""

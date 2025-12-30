@@ -13,6 +13,7 @@ def upsample_to_length(c, factor, N):
 
 class WaveletPreprocessor:
     """A preprocessor that applies wavelet transform."""
+    display_name: str = "Wavelet transform"
 
     def __init__(self, wavelet: str = "haar", level: int = 10, no_levels: int = 3):
         self.wavelet = wavelet
