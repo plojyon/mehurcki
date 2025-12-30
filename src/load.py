@@ -23,9 +23,7 @@ def load_annotations(file_path: os.Path) -> dict[str, list[BubbleAnnotation]]:
     for annotation in annotations:
         s = "-".join(annotation["audio"].split("/")[-1].split("-")[1:])
         file_name = s[:-10]
-        file_name += ":".join(
-            s[-10:-6][i : i + 2] for i in range(0, 6, 2)  # noqa: E203
-        )
+        file_name += ":".join(s[-10:-6][i : i + 2] for i in range(0, 6, 2))
         file_name += s[-6:]
 
         bubble_ranges = []

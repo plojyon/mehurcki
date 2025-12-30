@@ -5,7 +5,8 @@ from sample import get_sample
 
 
 class LogisticRegressionDetector:
-    """"A bubble detector using logistic regression."""
+    """A bubble detector using logistic regression."""
+
     def __init__(self, threshold: float = 0.5, max_iter: int = 1000):
         self.model = LogisticRegression(max_iter=max_iter)
         self.threshold = threshold

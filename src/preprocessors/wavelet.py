@@ -10,10 +10,11 @@ def upsample_to_length(c, factor, N):
         return np.pad(x, (0, N - len(x)))
     return x
 
-class WaveletPreprocessor:
-    """"A preprocessor that applies wavelet transform."""
 
-    def __init__(self, wavelet: str = 'haar', level: int = 10, no_levels: int = 3):
+class WaveletPreprocessor:
+    """A preprocessor that applies wavelet transform."""
+
+    def __init__(self, wavelet: str = "haar", level: int = 10, no_levels: int = 3):
         self.wavelet = wavelet
         self.level = level
         self.no_levels = no_levels
@@ -23,10 +24,9 @@ class WaveletPreprocessor:
         # print(f"Applying wavelet transform on {type(sample)} of shape {sample.shape}")
         coeffs = pywt.wavedec(sample, self.wavelet, level=self.level)
         # Upscale higher level coefficients to rectangularize the output
-        rect = np.vstack([
-            upsample_to_length(c, 2**k, len(sample))
-            for k, c in enumerate(reversed(coeffs))
-        ])
+        rect = np.vstack(
+            [upsample_to_length(c, 2**k, len(sample)) for k, c in enumerate(reversed(coeffs))]
+        )
         # print("0th", rect[0, :20])
         # print("-1th", rect[-1, :20])
         # only keep top self.no_levels levels (highest frequency)

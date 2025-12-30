@@ -21,9 +21,7 @@ def plot_annotations(ax, annotations, audio, color="red", label="Annotations"):
         ax.axvspan(start_s, end_s, color=color, alpha=0.25, label=label if i == 1 else "")
 
         y_loc = 0.9 * (np.max(audio) if np.max(np.abs(audio)) > 0 else 1.0)
-        ax.text(
-            (start_s + end_s) / 2, y_loc, str(i), ha="center", va="top", color="black"
-        )
+        ax.text((start_s + end_s) / 2, y_loc, str(i), ha="center", va="top", color="black")
 
 
 def plot_window(ax, start_s, end_s):

@@ -45,7 +45,6 @@ def stft(segment: np.ndarray, n_fft: int, hop: int) -> np.ndarray:
     return mag_db
 
 
-
 def samples_to_frames(interval: BubbleAnnotation, n_fft: int, hop_length: int):
     """Convert interval from sample space to stft frame space."""
     win_size_samples = interval.end - interval.start
@@ -57,7 +56,8 @@ def samples_to_frames(interval: BubbleAnnotation, n_fft: int, hop_length: int):
 
 
 class StftPreprocessor:
-    """"A preprocessor that applies STFT."""
+    """A preprocessor that applies STFT."""
+
     def __init__(self):
         self.n_fft = 2048
         self.hop_length = self.n_fft // 4
@@ -65,7 +65,7 @@ class StftPreprocessor:
     def transform(self, sample):
         """Transform the sample."""
         return stft(sample, n_fft=self.n_fft, hop=self.hop_length)
-    
+
     def transform_interval(self, interval: BubbleAnnotation):
         """Transform a specific interval of the sample."""
         return samples_to_frames(interval, n_fft=self.n_fft, hop_length=self.hop_length)

@@ -2,7 +2,7 @@ import numpy as np
 
 
 class IdentityPreprocessor:
-    """"A preprocessor that does nothing."""
+    """A preprocessor that does nothing."""
 
     def transform(self, sample):
         """Transform the sample."""

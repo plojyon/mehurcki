@@ -63,6 +63,7 @@ def sample_one(legal_sampling_ranges: list[BubbleAnnotation]) -> list[BubbleAnno
 
     return start + (r - prev)
 
+
 def sample_within_annotations(
     intervals: list[BubbleAnnotation],
     window_size: int,
@@ -74,7 +75,7 @@ def sample_within_annotations(
         return []
 
     # build initial legal sampling ranges
-    legal_sampling_ranges = []    
+    legal_sampling_ranges = []
     for start, end in intervals:
         if end - start >= window_size:
             legal_sampling_ranges.append((start, end - window_size))

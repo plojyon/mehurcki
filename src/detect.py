@@ -32,7 +32,13 @@ class BubbleDetector:
         "continuous_wavelet": ContinuousWaveletPreprocessor,
     }
 
-    def __init__(self, model_name: str, preprocessor_name: str, model_parameters: dict = {}, preprocessor_parameters: dict = {}):
+    def __init__(
+        self,
+        model_name: str,
+        preprocessor_name: str,
+        model_parameters: dict = {},
+        preprocessor_parameters: dict = {},
+    ):
         self.model = self.detectors[model_name](**model_parameters)
         self.preprocessor = self.preprocessors[preprocessor_name](**preprocessor_parameters)
 
@@ -43,8 +49,12 @@ class BubbleDetector:
     def train(self, data, positive_intervals, negative_intervals):
         """Train the bubble detector using positive and negative samples."""
         transformed = self.preprocessor.transform(data)
-        transformed_positive = [self.preprocessor.transform_interval(interval) for interval in positive_intervals]
-        transformed_negative = [self.preprocessor.transform_interval(interval) for interval in negative_intervals]
+        transformed_positive = [
+            self.preprocessor.transform_interval(interval) for interval in positive_intervals
+        ]
+        transformed_negative = [
+            self.preprocessor.transform_interval(interval) for interval in negative_intervals
+        ]
         return self.model.train(transformed, transformed_positive, transformed_negative)
 
     def detect(self, transformed_data, transformed_intervals):
@@ -57,7 +67,10 @@ class BubbleDetector:
         predictions = []
         transformed = self.preprocessor.transform(data)
         labels = [1] * len(positive_intervals) + [0] * len(negative_intervals)
-        transformed_intervals = [self.preprocessor.transform_interval(interval) for interval in positive_intervals + negative_intervals]
+        transformed_intervals = [
+            self.preprocessor.transform_interval(interval)
+            for interval in positive_intervals + negative_intervals
+        ]
         predictions = self.detect(transformed, transformed_intervals)
 
         precision, recall, f1, _ = precision_recall_fscore_support(
@@ -68,14 +81,8 @@ class BubbleDetector:
             print(f"{'='*50}")
             print(self.name)
             print(f"{'='*50}")
-            print(
-                f"Precision: {precision:.3f}"
-                f" ({precision*100:.0f}% of detections were real bubbles)"
-            )
-            print(
-                f"Recall:    {recall:.3f}"
-                f" ({recall*100:.0f}% of actual bubbles were detected)"
-            )
+            print(f"Precision: {precision:.3f} ({precision*100:.0f}% of detections were real bubbles)")
+            print(f"Recall:    {recall:.3f} ({recall*100:.0f}% of actual bubbles were detected)")
             print(f"F1-Score:  {f1:.3f}")
             print(f"{'='*50}")
         return precision, recall, f1

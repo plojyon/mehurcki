@@ -18,6 +18,7 @@ MERGE_THRESHOLD = 10  # in samples
 
 annotations = load_annotations("data/annotations.json")
 
+
 def prepare_data(file: Optional[str] = None):
     if file is not None:
         wav_files = [file]
@@ -42,10 +43,12 @@ def prepare_data(file: Optional[str] = None):
     for file_name in annotations:
         if file_name not in offsets:
             continue
-        all_annotations.extend([
-            BubbleAnnotation(start=ann[0] + offsets[file_name], end=ann[1] + offsets[file_name])
-            for ann in annotations[file_name]
-        ])
+        all_annotations.extend(
+            [
+                BubbleAnnotation(start=ann[0] + offsets[file_name], end=ann[1] + offsets[file_name])
+                for ann in annotations[file_name]
+            ]
+        )
 
     pos, neg = sample_training_data(
         len(data),
@@ -73,10 +76,11 @@ def prepare_data(file: Optional[str] = None):
 
     return (
         data,
-        train_positive, train_negative,
-        test_positive, test_negative,
+        train_positive,
+        train_negative,
+        test_positive,
+        test_negative,
     )
-
 
 
 def visualize_waveform(file_name):
@@ -91,6 +95,7 @@ def visualize_waveform(file_name):
         plot_annotations(ax, annotations[base_name], audio)
 
     plt.show()
+
 
 def visualize_detections(detector: BubbleDetector, data, annotations, file_name):
     fig, (ax_gt, ax_det) = plt.subplots(2, 1, figsize=(12, 6), sharex=True, sharey=True)
@@ -115,19 +120,15 @@ def visualize_detections(detector: BubbleDetector, data, annotations, file_name)
 
     window = int(WINDOW_SIZE * SAMPLE_RATE)
     intervals = [
-        BubbleAnnotation(start=i, end=i + window)
-        for i in range(0, len(data) - window, window)
+        BubbleAnnotation(start=i, end=i + window) for i in range(0, len(data) - window, window)
     ]
 
     transformed = detector.preprocessor.transform(data)
     transformed_intervals = [
-        detector.preprocessor.transform_interval(interval)
-        for interval in intervals
+        detector.preprocessor.transform_interval(interval) for interval in intervals
     ]
     labels = detector.detect(transformed, transformed_intervals)
-    detected_intervals = [
-        interval for interval, label in zip(intervals, labels) if label
-    ]
+    detected_intervals = [interval for interval, label in zip(intervals, labels) if label]
 
     if detected_intervals:
         # merge neighbouring intervals
@@ -157,11 +158,14 @@ def visualize_detections(detector: BubbleDetector, data, annotations, file_name)
     plt.tight_layout()
     plt.show()
 
+
 class Main:
     def visualize_waveform(self, file: str):
         visualize_waveform(file)
 
-    def train_detector(self, name:str="all", preprocessor: str="identity", file: Optional[str]=None):
+    def train_detector(
+        self, name: str = "all", preprocessor: str = "identity", file: Optional[str] = None
+    ):
         available_models = BubbleDetector.detectors.keys()
         available_preprocessors = BubbleDetector.preprocessors.keys()
 
@@ -184,7 +188,9 @@ class Main:
                     positive_intervals=train_positive,
                     negative_intervals=train_negative,
                 )
-                detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
+                detector.evaluate(
+                    data=data, positive_intervals=test_positive, negative_intervals=test_negative
+                )
         else:
             detector = BubbleDetector(name, preprocessor)
             detector.train(
@@ -193,7 +199,9 @@ class Main:
                 negative_intervals=train_negative,
             )
             if file is None:
-                detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
+                detector.evaluate(
+                    data=data, positive_intervals=test_positive, negative_intervals=test_negative
+                )
             else:
                 data = prepare_data(file)
                 visualize_detections(

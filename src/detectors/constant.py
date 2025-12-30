@@ -3,7 +3,7 @@ from sklearn import svm
 
 
 class ConstantDetector:
-    """"A bubble detector that always returns True."""
+    """A bubble detector that always returns True."""
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the classifier."""
