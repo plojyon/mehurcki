@@ -78,23 +78,6 @@ def prepare_data(file: Optional[str] = None):
     )
 
 
-def train_detector(
-    model: str,
-    preprocessor: str,
-    data,
-    train_positive,
-    train_negative,
-    test_positive,
-    test_negative,
-):
-    detector = BubbleDetector(model, preprocessor)
-    detector.train(
-        data=data,
-        positive_intervals=train_positive,
-        negative_intervals=train_negative,
-    )
-    detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
-    return detector
 
 def visualize_waveform(file_name):
     t, audio = load_wav(f"data/{file_name}")
@@ -187,18 +170,31 @@ class Main:
         if preprocessor not in available_preprocessors:
             raise ValueError(f"Available preprocessors: {list(available_preprocessors)}")
 
-        data = prepare_data()
+        data, train_positive, train_negative, test_positive, test_negative = prepare_data()
 
-        print(f"Loaded data of total length {data[0].shape} samples ({data[0].shape[0]/SAMPLE_RATE:.0f} seconds)")
+        print(f"Loaded data of total length {data.shape} samples ({data.shape[0]/SAMPLE_RATE:.0f} seconds)")
         print(f"Using window size of {WINDOW_SIZE}s ({int(WINDOW_SIZE * SAMPLE_RATE)} samples)")
-        print(f"Recommended wavelet levels: {np.log2(len(data[0])/(WINDOW_SIZE * SAMPLE_RATE)):.1f}")
+        print(f"Recommended wavelet levels: {np.log2(len(data)/(WINDOW_SIZE * SAMPLE_RATE)):.1f}")
 
         if name == "all":
             for model_name in available_models:
-                train_detector(model_name, preprocessor, *data)
+                detector = BubbleDetector(model_name, preprocessor)
+                detector.train(
+                    data=data,
+                    positive_intervals=train_positive,
+                    negative_intervals=train_negative,
+                )
+                detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
         else:
-            detector = train_detector(name, preprocessor, *data)
-            if file is not None:
+            detector = BubbleDetector(name, preprocessor)
+            detector.train(
+                data=data,
+                positive_intervals=train_positive,
+                negative_intervals=train_negative,
+            )
+            if file is None:
+                detector.evaluate(data=data, positive_intervals=test_positive, negative_intervals=test_negative)
+            else:
                 data = prepare_data(file)
                 visualize_detections(
                     detector=detector,
