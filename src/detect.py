@@ -5,10 +5,9 @@ from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 
 from detectors.constant import ConstantDetector
+from detectors.logistic import LogisticRegressionDetector
 from detectors.random import RandomDetector
 from detectors.random_forest import RandomForest
-
-# from detectors.wavelet import WaveletBubbleDetector
 from detectors.svm import SVMDetector
 from preprocessors.continuous_wavelet import ContinuousWaveletPreprocessor
 from preprocessors.identity import IdentityPreprocessor
@@ -24,6 +23,7 @@ class BubbleDetector:
         "random_forest": RandomForest,
         "random": RandomDetector,
         "svm": SVMDetector,
+        "logistic_regression": LogisticRegressionDetector,
     }
     preprocessors = {
         "identity": IdentityPreprocessor,
