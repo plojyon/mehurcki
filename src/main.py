@@ -15,7 +15,7 @@ from plot import plot_annotations, plot_wav
 from sample import sample_training_data
 
 SAMPLE_RATE = 44100
-WINDOW_SIZE = 0.05  # seconds
+WINDOW_SIZE = 0.1  # seconds
 TRAIN_RATIO = 0.7
 MERGE_THRESHOLD = 10  # in samples
 
