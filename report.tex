@@ -1,0 +1,176 @@
+\documentclass[9pt]{IEEEtran}
+\usepackage{graphicx} % Required for inserting images
+
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{array}
+\usepackage{textcomp}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{float}
+\usepackage{gensymb}
+\usepackage{longtable}
+\usepackage{supertabular}
+\usepackage{multicol}
+
+\usepackage[utf8x]{inputenc}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\title{Zaznavanje fermentacijske aktivnosti z zvokom}
+\author{Yon Ploj}
+\date{December 2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    TODO
+\end{abstract}
+
+\section{Uvod}
+Fermentacija ali alkoholno vrenje je osrednji biokemijski proces pri proizvodnji piva. Hitrost fermentacije odraža metabolno aktivnost kvasa v trenutnih okoljskih pogojih, zato ocenjevanje fermentacijske aktivnosti predstavlja nepogrešljivo povratno informacijo o zdravju kvasa, kar neposredno vpliva na kakovost piva.
+
+Avtomatska ocena hitrosti fermentacije omogoča zgodnje odkrivanje odstopanj od optimalnih pogojev in pravočasno prilagajanje. Avtomatizacija nam omogoča nenehno merjenje, s čimer prispevamo k večji procesni stabilnosti in s tem boljšim in ponovljivejšim senzoričnim lastnostim piva.
+
+Industrijski respirometri ponavadi delujejo na principu volumetrične analize izhajajočega ogljikovega dioksida, zaradi česar potrebujejo natančne in drage merilne inštrumente. Brez njih se zanašamo na ocenjevanje ``po posluhu'', torej vsake toliko časa poslušamo nastajanje mehurčkov v sifonu vrelnega zapaha (ang\@. \emph{airlock}).
+
+V tem članku predstavimo pristop zaznavanja fermentacijske aktivnosti piva z analizo zvoka mehurčkov, kar omogoča neinvazivno in avtomatizirano spremljanje fermentacije.
+
+
+
+\section{Metode}
+Našo eksperimentalno postavitev obsega 30-litrska neprodušno zaprta (razen sifona) fermentacijska posoda, v njenem pokrovu pa sifon, ki omogoča izhajanje plinov, ko v posodi naraste tlak. Na pokrovu posode se nahaja mikrokrmilnik ESP32 z mikrofonom, ki komunicira s strežnikom prek brezžičnega interneta. % TODO: katerim?
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{airlock.png}
+    \caption{Airlock}
+    \label{fig:airlock}
+\end{figure}
+
+
+\subsection{Zajem podatkov}
+V prvem delu smo iz mikrokrmilnika zbirali surove zvočne posnetke. Zbrali smo posnetke v različnih reprezentativnih okoliščinah, ki jih pričakujemo v praksi. Ker se fermentor nahaja v bivalnem prostoru, pričakujemo šume, kot so pogovor, smrčanje, zvok televizije, ipd.
+
+
+\subsection{Označevanje}
+Posnetke smo opremili z oznakami s pomočjo odprtokodnega programa Label Studio. Zvoke mehurčkov smo označili kot časovne intervale na posnetku.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{annotations-snoring.png}
+    \caption{Primer anotacij na posnetku s smrčanjem}
+    \label{fig:annotations-snoring}
+\end{figure}
+Slika \ref{fig:annotations-snoring} prikazuje primer zvočnega posnetka z označenimi mehurčki, v katerem je v ozadju slišno ritmično smrčanje.
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{annotations-difficult.png}
+    \caption{Primer anotacij na posnetku z močnim šumom}
+    \label{fig:annotations-difficult}
+\end{figure}
+Slika \ref{fig:annotations-difficult} prikazuje težavnejši primer posnetka, v katerem je v ozadju prisoten pogovor in zvok televizije.
+
+Zaradi težavnosti označevanja smo obseg podatkov močno omejili. Kljub veliki količini posnetega materiala, smo zbrali le 130 označenih intervalov na skupnem obsegu 256 sekund posnetka.
+
+
+\subsection{Gradnja detektorja}
+S programskim jezikom Python smo zgradili orodje, ki omogoča testiranje in evalvacijo različnih detektorjev in metod predprocesiranja.
+
+\subsubsection{Vzorčenje}
+Iz zvočnih posnetkov smo vzorčili okna v širini $0.10$ sekunde. Vzorčili smo le okna, ki so bodisi popolnoma vsebovana v označbi mehurčka, bodisi z njimi nimajo preseka. Poskrbeli smo tudi, da se pari vzorcev med sabo niso prekrivali, saj bi s tem lahko učni podatki ušli v testne.
+
+Vzorčili smo kar se da mnogo pozitivnih vzorcev, dokler je bilo to še mogoče brez prekrivanja. Zaradi stohastične narave vzorčenja število vzorcev ni bilo konstantno, temveč se je gibalo med 150 in 165. Pri negativnih vzorcih ni bilo omejitev, a smo jih vedno zajeli le toliko, kolikor je bilo pozitivnih. V nasprotnem primeru smo sicer opazili, da so se nekateri klasifikatorji naučili le prevladujočega razreda.
+
+\subsubsection{Algoritmi}
+Implementirali smo metodo podpornih vektorjev, naključni gozd in logistično regresijo.
+
+Podatke smo predpripravili bodisi z identitetno funckijo (brez predprocesiranja), s kratko-časovno Fourierjevo transformacijo, z zvezno ali z diskretno valčno transformacijo.
+
+Algoritem smo nato 20-krat pognali čez vse kombinacije klasifikatorjev in predprocesorjev in zbrali povprečne F1 vrednosti. Rezultati so prikazani v tabeli \ref{table:f1}.
+
+Analiza optimalnih parametrov za klasifikatorje je izpuščena iz tega članka. Ročno poiskani približki optimalnih parametrov so:
+\begin{itemize}
+    \item Predprocesorji
+    \begin{itemize}
+        \item \emph{Kratko-časovna Fourierjeva transformacija}:\\
+        dolžina analiznega okna: 2048 vzorcev,
+        dolžina koraka: 512 vzorcev,
+        okno: \texttt{hann},
+        \item \emph{Diskretna valčna transformacija}:\\
+        val: \texttt{haar}
+        \item \emph{Zvezna valčna transformacija}:\\
+        val: \texttt{morl}
+    \end{itemize}
+
+    \item Detektorji
+    \begin{itemize}
+        \item \emph{Naključni gozd}:\\
+        število dreves: 100,
+        maksimalna globina: 10
+        \item \emph{Logistična regresija}:\\
+        prag: 0.5
+        \item \emph{Podporni vektorji}:\\
+        regularizacijski parameter $C$: 1.0, jedro: \texttt{RBF}
+    \end{itemize}
+\end{itemize}
+
+
+\subsection{Uporaba}
+Zmagovalni detektor smo implementirali v programskem jeziku Arduino in ga naložili na mikrokrmilnik na našem fermentorju. Ob zaznanem zvoku mehurčka objavimo sporočilo prek protokola MQTT. Ločena obveščevalna enota nas potem lahko obvesti o nenavadnih vzorcih mehurčkov.
+% TODO: kaj potem s tem nardimo?
+
+
+
+\section{Rezultati}
+Tabela \ref{table:f1} prikazuje glavne rezultate analize -- F1 vrednosti različnih kombinacij detektorjev in predprocesorjev. Očitno je kombinacija podpornih vektorjev in kratkočasovne Fourierjeve transformacije najboljša.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{resuls-difficult.png}
+    \caption{Rezultati detekcije na močno šumnem posnetku}
+    \label{fig:results-difficult}
+\end{figure}
+Slika \ref{fig:results-difficult} prikazuje vizualen rezultat najboljšega detektorja. Vidimo, da kljub močnemu šumu dobro loči med zvokom mehurčka in človeškega glasu.
+
+% TODO: prakticni rezultati
+% primerjava s tradicionalnimi metodami
+
+
+\begin{table}[ht]
+\centering
+\caption{Povprečne F1 vrednosti za različne kombinacije predprocesorjev in detektorjev (20 ponovitev)}
+\begin{tabular}{lccc}
+\hline
+\textbf{Predprocesor} & \textbf{Naklj\@. gozd} & \textbf{MPV} & \textbf{Log\@. reg\@.} \\
+\hline
+Identiteta & 0.790 & 0.736 & 0.482 \\
+Kratko-časovna Fourierjeva trans. & 0.866 & 0.891 & 0.838 \\
+Diskretna valčna trans. & 0.488 & 0.364 & 0.402 \\
+Zvezna valčna trans. & 0.639 & 0.329 & 0.474 \\
+\hline
+\end{tabular}
+\label{table:f1}
+\end{table}
+
+\section{Diskusija}
+% TODO: interpretacija rezultatov
+% lessons learned, omejitve metode, vpliv na kakovost piva?, morebitne izboljsave
+
+\section{Zaključek}
+% TODO: povzetek glavnih ugotovitev in pomen dela za prakso
+
+
+\end{document}
