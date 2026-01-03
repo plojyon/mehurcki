@@ -1,3 +1,4 @@
+import joblib
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
@@ -33,3 +34,7 @@ class LogisticRegressionDetector:
             prediction = self.model.predict([get_sample(data, interval)])[0]
             predictions.append(prediction >= self.threshold)
         return predictions
+
+    def save(self, path: str):
+        """Save the trained model to a file."""
+        joblib.dump(self.model, path)

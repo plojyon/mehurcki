@@ -167,7 +167,11 @@ class Main:
         visualize_waveform(file)
 
     def train_detector(
-        self, name: str = "all", preprocessor: str = "identity", file: Optional[str] = None
+        self,
+        name: str = "all",
+        preprocessor: str = "identity",
+        file: Optional[str] = None,
+        save: bool = False,
     ):
         available_models = BubbleDetector.detectors.keys()
         available_preprocessors = BubbleDetector.preprocessors.keys()
@@ -201,6 +205,9 @@ class Main:
                 positive_intervals=train_positive,
                 negative_intervals=train_negative,
             )
+            if save:
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                detector.save(f"models/{name}_{preprocessor}_{timestamp}.model")
             if file is None:
                 detector.evaluate(
                     data=data, positive_intervals=test_positive, negative_intervals=test_negative

@@ -1,3 +1,4 @@
+import joblib
 import numpy as np
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
@@ -35,3 +36,7 @@ class RandomForest:
             prediction = self.model.predict([get_sample(data, interval)])
             predictions.append(bool(prediction[0]))
         return predictions
+
+    def save(self, path: str):
+        """Save the trained model to a file."""
+        joblib.dump(self.model, path)

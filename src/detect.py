@@ -20,10 +20,10 @@ class BubbleDetector:
 
     detectors = {
         # "constant_true": ConstantDetector,
-        "random_forest": RandomForest,
+        # "random_forest": RandomForest,
         # "random": RandomDetector,
         "svm": SVMDetector,
-        "logistic_regression": LogisticRegressionDetector,
+        # "logistic_regression": LogisticRegressionDetector,
     }
     preprocessors = {
         "identity": IdentityPreprocessor,
@@ -60,6 +60,14 @@ class BubbleDetector:
     def detect(self, transformed_data, transformed_intervals):
         """Detect bubbles in the STFT representation."""
         return self.model.detect(transformed_data, transformed_intervals)
+
+    def save(self, path: str):
+        """Save the trained model to a file."""
+        if hasattr(self.model, "save"):
+            self.model.save(path)
+        else:
+            with open(path, "w") as f:
+                f.write("")
 
     def evaluate(self, data, positive_intervals, negative_intervals, to_stdout=True):
         """Evaluate the bubble detector on the test set."""

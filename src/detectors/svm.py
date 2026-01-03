@@ -1,3 +1,4 @@
+import joblib
 import numpy as np
 from sklearn import svm
 
@@ -9,7 +10,7 @@ class SVMDetector:
     display_name: str = "SVM"
 
     def __init__(self):
-        self.model = svm.SVC()
+        self.model = svm.SVC(kernel="linear")
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the classifier."""
@@ -50,3 +51,9 @@ class SVMDetector:
             prediction = self.model.predict([get_sample(data, interval)])
             predictions.append(bool(prediction[0]))
         return predictions
+
+    def save(self, path: str):
+        """Save the trained model to a file."""
+        print("Saving SVM model to", path)
+        joblib.dump(self.model, path)
+        print("SVM model saved.")
