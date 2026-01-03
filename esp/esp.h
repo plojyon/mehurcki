@@ -1,5 +1,7 @@
 #pragma once
 
+#define STATUS_LED 2
+
 /*********/
 /* Wi-Fi */
 /*********/
@@ -8,6 +10,7 @@ struct WifiNetwork {
 	const char* passwd;
 };
 #define WIFI_CHECK_INTERVAL_SECONDS 10
+#define CONNECT_TO_OPEN_NETWORKS false
 
 /**************/
 /* Microphone */

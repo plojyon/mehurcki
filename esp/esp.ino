@@ -3,13 +3,12 @@
 #include <driver/i2s.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <arduinoFFT.h>
 
 #include "esp.h"
+#include "detector.h"
 #include "wifi_secrets.h"
 #include "mqtt_secrets.h"
-
-#define CONNECT_TO_OPEN_NETWORKS false
-#define STATUS_LED 2
 
 /*****************************************************************************/
 // Microphone //
@@ -170,16 +169,14 @@ WiFiClientSecure wifiClient;
 PubSubClient mqttClient(wifiClient);
 bool mqtt_connected = false;
 
-void mqtt_notify(bool bubble) {
+void mqtt_notify(const char* payload) {
 	if (!wifi_connected || !mqtt_connected) {
 		return;
 	}
-
-	const char* msg = bubble ? "yes bubble" : "no bubble";
-	bool ok = mqttClient.publish(MQTT_TOPIC, msg);
+	bool ok = mqttClient.publish(MQTT_TOPIC, payload);
 	if (ok) {
 		Serial.print("Sent '");
-		Serial.print(msg);
+		Serial.print(payload);
 		Serial.println("' to MQTT");
 	} else {
 		Serial.println("MQTT publish failed");
@@ -217,9 +214,47 @@ bool mqtt_connect() {
 /*****************************************************************************/
 // Detector //
 
-bool detect_bubbles(const char* sound, size_t len) {
-	// TODO
+ArduinoFFT FFT = ArduinoFFT<double>();
+double vReal[FFT_SIZE];
+double vImag[FFT_SIZE];
+double model_input[FFT_SIZE];
+
+bool stft(int16_t* samples, size_t n_samples) {
+	if (n_samples < FFT_SIZE) {
+		Serial.print("Not enough samples for FFT: ");
+		Serial.println(n_samples);
+		return false;
+	}
+
+	// Iterate over samples with step size STFT_STEP
+	for (size_t start = 0; start + FFT_SIZE <= n_samples; start += STFT_STEP) {
+		for (size_t i = 0; i < FFT_SIZE; i++) {
+			vReal[i] = (double)samples[start + i];
+			vImag[i] = 0.0;
+		}
+
+		FFT.windowing(vReal, FFT_SIZE, FFT_WIN_TYP_HANN, FFT_FORWARD);
+		FFT.compute(vReal, vImag, FFT_SIZE, FFT_FORWARD);
+		FFT.complexToMagnitude(vReal, vImag, FFT_SIZE);
+
+		for (size_t i = 0; i < FFT_SIZE; i++) {
+			model_input[i] += vReal[i] / FFT_SIZE;
+		}
+	}
+	Serial.print("STFT completed. Head: ");
+	Serial.print(model_input[0]);
+	Serial.print(",");
+	Serial.print(model_input[1]);
+	Serial.print(",");
+	Serial.print(model_input[2]);
+	Serial.print(",");
+	Serial.println(model_input[3]);
 	return true;
+}
+
+bool detect() {
+	// TODO: Implement detection logic
+	return false;
 }
 
 // Store 4 bytes for each 32 bit sample
@@ -246,9 +281,23 @@ void detector_loop() {
 		Serial.print("Read ");
 		Serial.print(samples_read);
 		Serial.println(" samples");
-		if (samples_read > 0) {
-			const bool bubble = detect_bubbles((const char*)buffer16, samples_read * sizeof(int16_t));
-			mqtt_notify(bubble);
+		if (samples_read == SAMPLE_BUFFER_SIZE) {
+			const bool ok = stft(buffer16, samples_read);
+			if (!ok) {
+				Serial.println("STFT failed!");
+				return;
+			}
+			const bool bubble = detect();
+			if (bubble) {
+				Serial.println("BUBBLE DETECTED!");
+				mqtt_notify("blub");
+			} else {
+				Serial.println("No bubble.");
+			}
+		}
+		else {
+			Serial.print("Not enough samples for detection?!: ");
+			Serial.println(samples_read);
 		}
 	}
 	else {
