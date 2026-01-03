@@ -10,7 +10,7 @@ class SVMDetector:
     display_name: str = "SVM"
 
     def __init__(self):
-        self.model = svm.SVC(kernel="linear")
+        self.model = svm.SVC()
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the classifier."""
@@ -42,6 +42,14 @@ class SVMDetector:
         )
         self.model.fit(X_train, y_train)
         print("SVM training completed.")
+
+        # quantize parameters to float16
+        sv = self.model.support_vectors_
+        sv[:] = sv.astype(np.float16).astype(np.float64)
+        dc = self.model.dual_coef_
+        dc[:] = dc.astype(np.float16).astype(np.float64)
+        ic = self.model.intercept_
+        ic[:] = ic.astype(np.float16).astype(np.float64)
 
     def detect(self, data, intervals):
         """Detect if the sample contains a bubble."""
