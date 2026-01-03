@@ -1,9 +1,12 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <driver/i2s.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 
 #include "esp.h"
 #include "wifi_secrets.h"
+#include "mqtt_secrets.h"
 
 #define CONNECT_TO_OPEN_NETWORKS false
 #define STATUS_LED 2
@@ -160,16 +163,102 @@ void wifi_loop() {
 	}
 }
 
+/*****************************************************************************/
+// MQTT //
+
+WiFiClientSecure wifiClient;
+PubSubClient mqttClient(wifiClient);
+bool mqtt_connected = false;
+
+void mqtt_notify(bool bubble) {
+	if (!wifi_connected || !mqtt_connected) {
+		return;
+	}
+
+	const char* msg = bubble ? "yes bubble" : "no bubble";
+	bool ok = mqttClient.publish(MQTT_TOPIC, msg);
+	if (ok) {
+		Serial.print("Sent '");
+		Serial.print(msg);
+		Serial.println("' to MQTT");
+	} else {
+		Serial.println("MQTT publish failed");
+	}
+}
+
+void mqtt_setup() {
+	wifiClient.setInsecure();
+	mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+	Serial.print("Set MQTT server to ");
+	Serial.print(MQTT_HOST);
+	Serial.print(":");
+	Serial.println(MQTT_PORT);
+}
+
+bool mqtt_connect() {
+	if (mqttClient.connected()) {
+		return true;
+	}
+
+	Serial.print("Connecting to MQTT...");
+	if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD)) {
+		Serial.println("connected");
+		mqtt_connected = true;
+		return true;
+	} else {
+		Serial.print("failed, rc=");
+		Serial.println(mqttClient.state());
+		mqtt_connected = false;
+		delay(1000);
+		return false;
+	}
+}
 
 /*****************************************************************************/
 // Detector //
 
+bool detect_bubbles(const char* sound, size_t len) {
+	// TODO
+	return true;
+}
+
+// Store 4 bytes for each 32 bit sample
+uint8_t buffer32[SAMPLE_BUFFER_SIZE * 4];
+int16_t buffer16[SAMPLE_BUFFER_SIZE];
+
 void detector_loop() {
-	// TODO: Read from microphone, detect bubbles, send MQTT message
+	Serial.println("Detecting bubbles");
+
+	// Get I2S data and place in data buffer
+	size_t bytes_read = 0;
+
+	esp_err_t result = i2s_read(I2S_NUM_0, buffer32, sizeof(int32_t) * SAMPLE_BUFFER_SIZE, &bytes_read, portMAX_DELAY);
+	int samples_read = bytes_read / sizeof(int32_t);
+	for (int i = 0; i < samples_read; i++) {
+		uint8_t mid = buffer32[i * 4 + 2];
+		uint8_t msb = buffer32[i * 4 + 3];
+		uint16_t raw = (((uint32_t)msb) << 8) + ((uint32_t)mid);
+		memcpy(&buffer16[i], &raw, sizeof(raw)); // Copy so sign bits aren't interfered with somehow.
+	}
+
+	if (result == ESP_OK) {
+		// Detect bubbles
+		Serial.print("Read ");
+		Serial.print(samples_read);
+		Serial.println(" samples");
+		if (samples_read > 0) {
+			const bool bubble = detect_bubbles((const char*)buffer16, samples_read * sizeof(int16_t));
+			mqtt_notify(bubble);
+		}
+	}
+	else {
+		Serial.print("Result of reading is ");
+		Serial.println(result);
+	}
 }
 
 void detector_setup() {
-	// TODO: Initialize MQTT?
+	// ...
 }
 
 
@@ -188,8 +277,8 @@ void setup() {
 	i2s_setpin();
 	i2s_start(I2S_PORT);
 
-	// detector setup
-	detector_setup();
+	// mqtt
+	mqtt_setup();
 
 	Serial.println("Setup done!");
 
@@ -199,7 +288,13 @@ void setup() {
 void loop() {
 	if (wifi_connected) {
 		digitalWrite(STATUS_LED, LOW);
-		detector_loop();
+		if (mqtt_connected) {
+			mqttClient.loop();
+			detector_loop();
+		}
+		else {
+			mqtt_connect();
+		}
 	} else {
 		digitalWrite(STATUS_LED, HIGH);
 		connect_to_wifi();
