@@ -8,6 +8,12 @@
 #include <PubSubClient.h>
 #include <arduinoFFT.h>
 
+#define WEBSOCKETS true
+#if WEBSOCKETS
+#include <ArduinoWebsockets.h>
+using namespace websockets;
+#endif
+
 #include "esp.h"
 #include "detector.h"
 #include "wifi_secrets.h"
@@ -166,6 +172,45 @@ void wifi_loop() {
 		}
 	}
 }
+
+/*****************************************************************************/
+// Websockets //
+
+#if WEBSOCKETS
+const char* WS_ENDPOINT = "ws://192.168.1.115:8080/ws";
+WebsocketsClient ws_client;
+bool ws_connected = false;
+bool is_connecting = false;
+
+void init_websocket() {
+	if(!is_connecting) {
+		is_connecting = true;
+		bool connected = ws_client.connect(WS_ENDPOINT);
+		is_connecting = false;
+		if(connected) {
+			Serial.println("WS Connected!");
+		} else {
+			Serial.println("WS Not Connected!");
+			delay(1000);
+		}
+		ws_connected = connected;
+	}
+}
+void onEventsCallback(WebsocketsEvent event, String data) {
+	if(event == WebsocketsEvent::ConnectionOpened) {
+		Serial.println("Connnection Opened");
+	} else if(event == WebsocketsEvent::ConnectionClosed) {
+		Serial.println("Connnection Closed");
+		ws_connected = false;
+		ws_client.close();
+		init_websocket();
+	} else if(event == WebsocketsEvent::GotPing) {
+		Serial.println("Got a Ping!");
+	} else if(event == WebsocketsEvent::GotPong) {
+		Serial.println("Got a Pong!");
+	}
+}
+#endif
 
 /*****************************************************************************/
 // MQTT //
@@ -393,6 +438,11 @@ void detector_loop() {
 	}
 
 	if (result == ESP_OK) {
+		#if WEBSOCKETS
+			Serial.println(buffer16[0]);
+			ws_client.sendBinary((const char*)buffer16, samples_read * sizeof(int16_t));
+			return;
+		#endif
 		// Detect bubbles
 		// Serial.print("Read ");
 		// Serial.print(samples_read);
@@ -535,6 +585,10 @@ void loop() {
 	} else {
 		digitalWrite(STATUS_LED, HIGH);
 		connect_to_wifi();
+
+		#if WEBSOCKETS
+		init_websocket();
+		#endif
 	}
 
 	wifi_loop();
