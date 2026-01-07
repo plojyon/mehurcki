@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Optional
 
+import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 
@@ -40,20 +41,28 @@ class BubbleDetector:
         preprocessor_parameters: dict = {},
     ):
         self.model = self.detectors[model_name](**model_parameters)
-        self.preprocessor = self.preprocessors[preprocessor_name](**preprocessor_parameters)
+        self.preprocessor = self.preprocessors[preprocessor_name](
+            **preprocessor_parameters
+        )
 
-        str_prepr_params = "" if not preprocessor_parameters else f"({preprocessor_parameters})"
+        str_prepr_params = (
+            "" if not preprocessor_parameters else f"({preprocessor_parameters})"
+        )
         str_model_params = "" if not model_parameters else f"({model_parameters})"
-        self.name = f"{preprocessor_name}{str_prepr_params}:{model_name}{str_model_params}"
+        self.name = (
+            f"{preprocessor_name}{str_prepr_params}:{model_name}{str_model_params}"
+        )
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the bubble detector using positive and negative samples."""
         transformed = self.preprocessor.transform(data)
         transformed_positive = [
-            self.preprocessor.transform_interval(interval) for interval in positive_intervals
+            self.preprocessor.transform_interval(interval)
+            for interval in positive_intervals
         ]
         transformed_negative = [
-            self.preprocessor.transform_interval(interval) for interval in negative_intervals
+            self.preprocessor.transform_interval(interval)
+            for interval in negative_intervals
         ]
         return self.model.train(transformed, transformed_positive, transformed_negative)
 
@@ -73,13 +82,42 @@ class BubbleDetector:
         """Evaluate the bubble detector on the test set."""
         labels = []
         predictions = []
+        # print("Head of raw_data:")
+        # print(data)
+        # print("Max raw data:", data.max())
+        # print("Min raw data:", data.min())
+        print("data")
+        print(data)
         transformed = self.preprocessor.transform(data)
+        print("transformed")
+        print(transformed)
+        # print("Head of model_input:")
+        # print(transformed)
+        # print("Max model input:", transformed.max())
+        # print("Min model input:", transformed.min())
         labels = [1] * len(positive_intervals) + [0] * len(negative_intervals)
         transformed_intervals = [
             self.preprocessor.transform_interval(interval)
             for interval in positive_intervals + negative_intervals
         ]
         predictions = self.detect(transformed, transformed_intervals)
+
+        # get a TP and a TN sample
+        # need_tp = True
+        # need_tn = True
+        # for label, prediction, interval in zip(
+        #     labels, predictions, positive_intervals + negative_intervals
+        # ):
+        #     if label == 1 and prediction == 1 and need_tp:
+        #         print("True positive sample:")
+        #         print("[", ",".join(map(str, data[interval.start:interval.end].astype(np.int16))), "]")
+        #         need_tp = False
+        #     if label == 0 and prediction == 0 and need_tn:
+        #         print("True negative sample:")
+        #         print("[", ",".join(map(str, data[interval.start:interval.end].astype(np.int16))), "]")
+        #         need_tn = False
+        #     if not need_tp and not need_tn:
+        #         break
 
         precision, recall, f1, _ = precision_recall_fscore_support(
             labels, predictions, average="binary", zero_division=0
@@ -89,8 +127,12 @@ class BubbleDetector:
             print(f"{'='*50}")
             print(self.name)
             print(f"{'='*50}")
-            print(f"Precision: {precision:.3f} ({precision*100:.0f}% of detections were real bubbles)")
-            print(f"Recall:    {recall:.3f} ({recall*100:.0f}% of actual bubbles were detected)")
+            print(
+                f"Precision: {precision:.3f} ({precision*100:.0f}% of detections were real bubbles)"
+            )
+            print(
+                f"Recall:    {recall:.3f} ({recall*100:.0f}% of actual bubbles were detected)"
+            )
             print(f"F1-Score:  {f1:.3f}")
             print(f"{'='*50}")
         return precision, recall, f1

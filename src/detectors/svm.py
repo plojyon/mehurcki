@@ -7,10 +7,11 @@ from sample import get_sample
 
 class SVMDetector:
     """A bubble detector using SVM."""
+
     display_name: str = "SVM"
 
     def __init__(self):
-        self.model = svm.SVC()
+        self.model = svm.SVC(probability=True)
 
     def train(self, data, positive_intervals, negative_intervals):
         """Train the classifier."""
@@ -29,7 +30,9 @@ class SVMDetector:
             neg.append(get_sample(data, interval))
             # print(f"neg shape: {data[:, interval.start].shape}")
 
-        print(f"Collected {len(pos)} positive and {len(neg)} negative samples for SVM training.")
+        print(
+            f"Collected {len(pos)} positive and {len(neg)} negative samples for SVM training."
+        )
         X_train = np.array(pos + neg)
         y_train = np.array([1] * len(pos) + [0] * len(neg))
         print(
@@ -57,6 +60,8 @@ class SVMDetector:
         predictions = []
         for interval in intervals:
             prediction = self.model.predict([get_sample(data, interval)])
+            if prediction[0] < 0 or True:
+                print(prediction)
             predictions.append(bool(prediction[0]))
         return predictions
 

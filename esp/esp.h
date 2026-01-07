@@ -19,9 +19,8 @@ struct WifiNetwork {
 #define I2S_WS 25
 #define I2S_SD 33
 #define I2S_SCK 32
-
-// Use I2S Processor 0
 #define I2S_PORT I2S_NUM_0
 
-// Define input buffer length
+// Sampling settings
+#define SAMPLE_RATE 44100
 #define SAMPLE_BUFFER_SIZE 4410

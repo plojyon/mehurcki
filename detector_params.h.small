@@ -1,0 +1,19 @@
+#pragma once
+
+#define N_FEATURES 3
+#define N_SUPPORT 3
+
+static const float16 support_vectors[N_SUPPORT][N_FEATURES] = {
+    0, 0, 0
+};
+
+static const float16 dual_coef[N_SUPPORT] = {
+  0, 0, 0
+};
+
+
+static const float16 intercept = 0;
+
+#define GAMMA 0.5
+
+
