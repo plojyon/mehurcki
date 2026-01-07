@@ -8,8 +8,8 @@
 #include <PubSubClient.h>
 #include <arduinoFFT.h>
 
-#define WEBSOCKETS true
-#if WEBSOCKETS
+#define RECORD false
+#if RECORD
 #include <ArduinoWebsockets.h>
 using namespace websockets;
 #endif
@@ -176,7 +176,7 @@ void wifi_loop() {
 /*****************************************************************************/
 // Websockets //
 
-#if WEBSOCKETS
+#if RECORD
 const char* WS_ENDPOINT = "ws://192.168.1.115:8080/ws";
 WebsocketsClient ws_client;
 bool ws_connected = false;
@@ -282,6 +282,10 @@ float vImag[FFT_SIZE];
 void stft(int16_t* samples, size_t n_samples) {
 	const size_t freq_bins = FFT_SIZE; // yeah it's redundant, so what
 
+	for (size_t i = 0; i < FFT_SIZE; i++) {
+		model_input[i] = 0;
+	}
+
 	size_t num_frames;
 	if (n_samples < FFT_SIZE) {
 		num_frames = 1;
@@ -303,10 +307,6 @@ void stft(int16_t* samples, size_t n_samples) {
 		}
 
 		// FFT
-		// fft.Windowing(FFT_WIN_TYP_NONE, FFT_FORWARD); // window already applied
-		// fft.Compute(FFT_FORWARD);
-		// fft.ComplexToMagnitude();
-		// FFT.windowing(vReal, FFT_SIZE, FFT_WIN_TYP_HANN, FFT_FORWARD);
 		FFT.compute(vReal, vImag, FFT_SIZE, FFT_FORWARD);
 		FFT.complexToMagnitude(vReal, vImag, FFT_SIZE);
 
@@ -321,22 +321,6 @@ void stft(int16_t* samples, size_t n_samples) {
 
 /*****************************************************************************/
 // SVM //
-
-// float int2float(uint16_t h) {
-//	 uint32_t sign = (uint32_t)(h & 0x8000) << 16;
-//	 uint32_t exp  = (h >> 10) & 0x1F;
-//	 uint32_t mant = h & 0x03FF;
-
-//	 // Adjust exponent bias (15 -> 127)
-//	 uint32_t f_exp  = (exp + (127 - 15)) << 23;
-//	 uint32_t f_mant = mant << 13;
-
-//	 uint32_t bits = sign | f_exp | f_mant;
-
-//	 float result;
-//	 memcpy(&result, &bits, sizeof(result));
-//	 return result;
-// }
 
 float int2float(uint16_t h) {
 	uint32_t sign = (uint32_t)(h & 0x8000) << 16;
@@ -438,8 +422,8 @@ void detector_loop() {
 	}
 
 	if (result == ESP_OK) {
-		#if WEBSOCKETS
-			Serial.println(buffer16[0]);
+		#if RECORD
+			// Serial.println(buffer16[0]);
 			ws_client.sendBinary((const char*)buffer16, samples_read * sizeof(int16_t));
 			return;
 		#endif
@@ -457,24 +441,26 @@ void detector_loop() {
 			// Serial.print(",");
 			// Serial.println(buffer16[3]);
 			stft(buffer16, samples_read);
-			Serial.print("Head of model_input: ");
-			Serial.print(model_input[0]);
-			Serial.print(",");
-			Serial.print(model_input[1]);
-			Serial.print(",");
-			Serial.print(model_input[2]);
-			Serial.print(",");
-			Serial.println(model_input[3]);
+			// Serial.print("Head of model_input: ");
+			// Serial.print(model_input[0]);
+			// Serial.print(",");
+			// Serial.print(model_input[1]);
+			// Serial.print(",");
+			// Serial.print(model_input[2]);
+			// Serial.print(",");
+			// Serial.println(model_input[3]);
 			const float bubble = svm_predict(model_input);
 			if (bubble > 0.0f) {
 				Serial.print("BUBBLE DETECTED! Detector result: ");
 				Serial.println(bubble, 10);
 				// mqtt_notify("blub");
+				digitalWrite(STATUS_LED, HIGH);
 			} else {
-				// Serial.print("No bubble. Detector result: ");
+				Serial.print("No bubble. Detector result: ");
 				Serial.println(bubble, 10);
+				digitalWrite(STATUS_LED, LOW);
 			}
-			delay(10000);
+			// delay(10000);
 		}
 		else {
 			Serial.print("Not enough samples for detection?!: ");
@@ -574,19 +560,17 @@ void setup() {
 
 void loop() {
 	if (wifi_connected) {
-		digitalWrite(STATUS_LED, LOW);
 		if (mqtt_connected) {
-			mqttClient.loop();
+			//mqttClient.loop();
 			detector_loop();
 		}
 		else {
 			mqtt_connect();
 		}
 	} else {
-		digitalWrite(STATUS_LED, HIGH);
 		connect_to_wifi();
 
-		#if WEBSOCKETS
+		#if RECORD
 		init_websocket();
 		#endif
 	}

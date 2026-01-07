@@ -1,16 +1,10 @@
-import asyncio
 import datetime
-import io
-import struct
 import time
 import wave
 
 import uvicorn
 from eventemitter import EventEmitter
 from fastapi import FastAPI, WebSocket
-from fastapi.responses import HTMLResponse, StreamingResponse
-from httpx import get
-from matplotlib import pyplot as plt
 
 app = FastAPI()
 sound_event_emitter = EventEmitter()
@@ -33,7 +27,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     while not exit_loop:
         with wave.open(
-            f"bruhica/no/output_{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H:%M:%S')}.wav",
+            f"bruhica/output_{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H:%M:%S')}.wav",
             "wb",
         ) as wf:
             wf.setnchannels(channels)
